@@ -1,0 +1,7 @@
+* raspberry_ansible_config
+
+** About
+This repo contains an Ansible playbook used to automate a home security camera setup.
+
+** Usage
+Use the =pibakery_template= xml template with the [[http://pibakery.org/][PiBakery Tool]] to configure and install Raspbian Lite on the Raspberry Pi and setup the network. Then use [[https://www.ansible.com/][Ansible]] with the provided playbook to install the excellent [[https://github.com/ccrisan/motioneye/wiki][MotionEye]] front-end for the motion daemon.

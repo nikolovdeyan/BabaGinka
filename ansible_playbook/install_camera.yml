@@ -1,0 +1,100 @@
+---
+# This is a draft of the play used to script an automated Ansible
+# deployment of a home security camera with Raspberry Pi 2 Model B / Raspbian Lite
+# using the motioneye front-end for the motion daemon.
+- name: Install Camera
+  hosts: rpi2
+  gather_facts: yes
+  remote_user: pi
+  become: yes
+  vars:
+    boot_config: {'start_x': '1', 'gpu_mem': '196', 'disable_camera_led': '1'}
+  tasks:     
+    - name: <1/18> Updating system...
+      apt: update_cache=yes
+      
+    - name: <2/18> Upgrading system...
+      apt: upgrade=full
+      
+    - name: <3/18> Adding boot settings to enable raspberry pi on-board camera module...
+      lineinfile: line='{{ item.key }}={{ item.value }}'
+        dest=/boot/config.txt
+        regexp="^{{ item.key }}="
+      with_dict: '{{ boot_config }}'
+      register: _boot_config
+      
+    - name: <4/18> Adding raspberry camera kernel module...
+      lineinfile:
+        dest: /etc/modules
+        regexp: 'bcm2835-v4l2'
+        line: 'bcm2835-v4l2'
+        state: present
+      
+    - name: <5/18> Downloading the required dependencies (ffmpeg precompiled)...
+      get_url:
+        url: https://github.com/ccrisan/motioneye/wiki/precompiled/ffmpeg_3.1.1-1_armhf.deb
+        dest: /home/pi/ffmpeg_3.1.1-1_armhf.deb
+
+    - name: <6/18> Downloading the required dependencies (motion)...
+      get_url:
+        url: https://github.com/Motion-Project/motion/releases/download/release-4.0.1/pi_jessie_motion_4.0.1-1_armhf.deb  
+        dest: /home/pi/pi_jessie_motion_4.0.1-1_armhf.deb
+
+    - name: <7/18> Installing the required dependencies (ffmpeg)...
+      command: dpkg -i ffmpeg_3.1.1-1_armhf.deb
+
+    - name: <8/18> Installing the required dependencies (motion dependencies)...
+      apt: pkg={{ item }} state=present
+      with_items:
+        - python-pip
+        - python-dev
+        - curl
+        - libssl-dev
+        - libcurl4-openssl-dev
+        - libjpeg-dev
+        - libx264-142
+        - libavcodec56
+        - libavformat56
+        - libmysqlclient18
+        - libswscale3
+        - libpq5
+
+    - name: <9/18> Installing motion...
+      command: dpkg -i pi_jessie_motion_4.0.1-1_armhf.deb
+
+    - name: <10/18> Installing motioneye...
+      command: pip install motioneye
+      
+    - name: <11/18> Creating motioneye configuration directory...
+      file: path=/etc/motioneye state=directory
+
+    - name: <12/18> Copying motioneye default configuration...
+      command: cp /usr/local/share/motioneye/extra/motioneye.conf.sample /etc/motioneye/motioneye.conf
+
+    - name: <13/18> Creating motioneye data state directory...
+      file: path=/var/lib/motioneye state=directory
+
+    - name: <14/18> Adding motioneye service...
+      command: cp /usr/local/share/motioneye/extra/motioneye.systemd-unit-local /etc/systemd/system/motioneye.service
+
+    - name: <15/18> Reloading systemd manager configuration...
+      command: systemctl daemon-reload
+      
+    - name: <16/18> Enabling motioneye...
+      command: systemctl enable motioneye
+      
+    - name: <17/18> Starting motioneye...
+      command: systemctl start motioneye
+      
+    - name: <18/18> Install additional utilities...
+      apt: pkg={{item}} state=present
+      with_items:
+        - vim
+        - git
+
+#   - TODO: Add camera settings configuration files here...
+    - name: <Rebooting> Playbook complete! Thanks for playing =)
+      shell: sleep 2 && shutdown -r now "Ansible reboot triggered"
+      async: 1
+      poll: 0
+      ignore_errors: true

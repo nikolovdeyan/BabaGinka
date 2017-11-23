@@ -1,0 +1,3 @@
+[rpi2]
+0.0.0.0 ansible_user=pi ansible_password=pi_user_password_here
+
