@@ -1,0 +1,41 @@
+---
+- name: Upload Static Files
+  hosts: rpi2
+  gather_facts: no
+  remote_user: pi
+  become: yes
+  tasks:     
+    - name: <1/7> Updating system...
+      apt: update_cache=yes
+      
+    - name: <2/7> Upgrading system...
+      apt: upgrade=full
+
+    - name: <3/7> Replacing motioneye CSS...
+      copy:
+        src: "{{ item }}"
+        dest: /usr/local/lib/python2.7/dist-packages/motioneye/static/js
+        owner: pi
+      with_fileglob:
+        - motioneye-static/css/*
+
+    - name: <4/7> Replacing motioneye JS...
+      copy:
+        src: "{{ item }}"
+        dest: /usr/local/lib/python2.7/dist-packages/motioneye/static/js
+        owner: pi
+      with_fileglob:
+        - motioneye-static/js/*
+        
+    - name: <5/7> Replacing motioneye templates...
+      copy:
+        src: "{{ item }}"
+        dest: /usr/local/lib/python2.7/dist-packages/motioneye/templates
+        owner: pi
+      with_fileglob:
+        - motioneye-templates/*
+    - name: <6/7> Reloading systemd manager configuration...
+      command: systemctl daemon-reload
+      
+    - name: <7/7> Restarting motioneye...
+      command: systemctl restart motioneye
