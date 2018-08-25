@@ -1,3 +1,23 @@
+body {
+    font-size: 16px;
+}
+
+.navbar-default .navbar-nav > li > a {
+    color: #fff;
+}
+
+.navbar-default {
+    background: url(../images/about.png) 50% 0 fixed;
+}
+
+.active {
+    background: url(../images/active.png) 50% 0 fixed;
+}
+
+.container {
+    padding: 0;
+}
+
 #intro {
   background: url(../images/intro.png) 50% 0 fixed;
   height: auto;
@@ -30,7 +50,7 @@
 
 #intermission {
   background: url(../images/intermission.jpg) 50% 0 fixed;
-  height: auto;
+  height: 60px;
   margin: 0 auto;
   width: 100%;
   position: relative;
@@ -48,11 +68,20 @@
   padding: 100px 0;
   color: #fff;
 }
-/* Non-essential demo stuff */
 
 .hero-unit {
-  background-color: #fff;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    font-family: 'Alegreya SC', arial;
+    background: url(../images/about.png) 50% 0 fixed;
+    height: auto;
+    margin: 0 auto;
+    width: 90%;
+    position: relative;
+    box-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
+    border-radius: 14px;
+    padding: 25px;
+    color: #fff;
+    font-size: 22px;
+    text-align: center;
 }
 
 .media-object {
@@ -63,4 +92,8 @@
 
 .navbar-retro {
     background-color: #996633;
+}
+
+.title-image {
+    padding-bottom: 60px;
 }
