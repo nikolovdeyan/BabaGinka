@@ -1,0 +1,6 @@
+[rpi2]
+192.168.0.5 ansible_user=pi
+[rpi2:vars]
+ansible_user=pi
+ansible_ssh_pass=raspberry
+ansible_ssh_extra_args='-o StrictHostKeyChecking=no'

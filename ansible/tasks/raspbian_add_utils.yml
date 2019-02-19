@@ -1,0 +1,8 @@
+- name: installing additional utilities
+  apt:
+    name: '{{ packages }}'
+  vars:
+    packages:
+      - vim
+      - git
+

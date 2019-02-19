@@ -1,0 +1,37 @@
+- name: install motioneye dependencies
+  apt:
+    name: '{{packages}}'
+  vars:
+    packages:
+      - python-pip
+      - python-dev
+      - libssl-dev
+      - libcurl4-openssl-dev
+      - libjpeg-dev
+      - libz-dev
+
+- name: install motioneye
+  command: pip install motioneye
+  
+- name: prepare motioneye configuration directory
+  file: path=/etc/motioneye state=directory
+
+- name: copy motioneye default configuration
+  template:
+    src: ../templates/motioneye.conf
+    dest: /etc/motioneye/motioneye.conf
+
+- name: prepare motioneye media directory
+  file: path=/var/lib/motioneye state=directory
+
+- name: add motioneye service
+  command: cp /usr/local/share/motioneye/extra/motioneye.systemd-unit-local /etc/systemd/system/motioneye.service
+
+- name: reload systemd manager configuration
+  command: systemctl daemon-reload
+  
+- name: enable motioneye
+  command: systemctl enable motioneye
+  
+- name: start motioneye
+  command: systemctl start motioneye

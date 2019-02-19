@@ -1,0 +1,35 @@
+- name: expand filesystem
+  command: raspi-config --expand-rootfs
+  become: yes
+
+- name: set hostname
+  become: yes
+  command: hostnamectl set-hostname "{{ HOSTNAME }}"
+
+# Double quotes are needed in order for the \t to output a tab character
+- name: set static localhost name
+  lineinfile:
+    path: /etc/hosts
+    regexp: '^127\.0\.0\.1'
+    line: "127.0.0.1\t{{ HOSTNAME }}"
+
+- name: setup wifi
+  become: yes
+  template: src=templates/wpa_supplicant.conf dest=/etc/wpa_supplicant/wpa_supplicant.conf
+
+- name: add ssh key
+  become: yes
+  authorized_key:
+    user: pi
+    state: present
+    key: "{{lookup('file', '~/.ssh/id_rsa.pub') }}"
+
+- name: update system
+  become: yes
+  apt:
+    update_cache=yes
+      
+- name: upgrade system
+  become: yes
+  apt:
+    upgrade=dist

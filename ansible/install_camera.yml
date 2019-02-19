@@ -1,0 +1,40 @@
+---
+- name: Install Baba Ginka
+  hosts: rpi2
+  gather_facts: yes
+  remote_user: pi
+  become: yes
+
+  vars:
+    boot_config: {'start_x': '1', 'gpu_mem': '192', 'disable_camera_led': '1'}
+
+  vars_prompt:
+
+    - name: HOSTNAME
+      prompt: "Hostname"
+      private: no
+    - name: WLAN_SSID
+      prompt: "Wireless network to connect to"
+      private: no
+    - name: WLAN_PASS
+      prompt: "Wireless network password"
+      private: yes
+
+  tasks:
+    - include_tasks: tasks/raspbian_common.yml
+
+    - include_tasks: tasks/raspbian_cameramodule.yml
+
+    - include_tasks: tasks/motion_install.yml
+
+    - include_tasks: tasks/motioneye_install.yml
+
+    - include_tasks: tasks/configure_motion.yml
+
+    - include_tasks: tasks/raspbian_add_utils.yml
+
+    - name: Playbook complete! Restarting Raspberry Pi
+      shell: sleep 2 && shutdown -r now "Ansible reboot triggered"
+      async: 1
+      poll: 0
+      ignore_errors: true

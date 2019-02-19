@@ -1,0 +1,13 @@
+- name: enable raspberry pi on-board camera module
+  lineinfile: line='{{ item.key }}={{ item.value }}'
+      dest=/boot/config.txt
+      regexp="^{{ item.key }}="
+  with_dict: '{{ boot_config }}'
+  register: _boot_config
+      
+- name: add raspberry camera kernel module
+  lineinfile:
+    dest: /etc/modules
+    regexp: 'bcm2835-v4l2'
+    line: 'bcm2835-v4l2'
+    state: present
