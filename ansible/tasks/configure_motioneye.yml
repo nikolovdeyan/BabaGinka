@@ -1,15 +1,3 @@
-- name: <motion.conf> Adding username
-  lineinfile:
-    dest: /etc/motioneye/motion.conf
-    regexp: '^# @normal_username'
-    line: '# @normal_username ginka'
-
-- name: <motioneye.conf> Modify to listen to port 80
-  lineinfile:
-    dest: /etc/motioneye/motioneye.conf
-    regexp: '^port'
-    line: 'port 80'
-
 - name: <thread-1.conf> Stopping motion detection by default
   lineinfile:
     dest: /etc/motioneye/thread-1.conf

@@ -1,4 +1,9 @@
-- name: install motion dependencies
+# Ansible task to install motion - a video signal monitoring program
+# -----------------------------------------------------------------------------
+#
+# More info at https://github.com/Motion-Project
+
+- name: <Install motion> Install motion dependencies
   apt:
     name: '{{packages}}'
   vars:
@@ -8,20 +13,10 @@
       - libmariadbclient18
       - libpq5
 
-- name: download motion
+- name: <Install motion> Download motion
   get_url:
     url: https://github.com/Motion-Project/motion/releases/download/release-4.1.1/pi_stretch_motion_4.1.1-1_armhf.deb
     dest: /home/pi/pi_stretch_motion_4.1.1-1_armhf.deb
     
-- name: install motion
+- name: <Install motion> Install motion
   command: dpkg -i pi_stretch_motion_4.1.1-1_armhf.deb
-
-- name: copy motion default configuration
-  template:
-    src: ../templates/motion.conf
-    dest: /etc/motioneye/motion.conf
-
-- name: copy motion thread configuration
-  template:
-    src: ../templates/thread-1.conf
-    dest: /etc/motioneye/thread-1.conf

@@ -1,5 +1,5 @@
 [rpi2]
-192.168.0.5 ansible_user=pi
+0.0.0.0 ansible_user=pi
 [rpi2:vars]
 ansible_user=pi
 ansible_ssh_pass=raspberry

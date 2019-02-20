@@ -11,14 +11,39 @@
   vars_prompt:
 
     - name: HOSTNAME
-      prompt: "Hostname"
+      prompt: "Please provide a hostname for the camera unit"
       private: no
+
     - name: WLAN_SSID
       prompt: "Wireless network to connect to"
       private: no
+
     - name: WLAN_PASS
       prompt: "Wireless network password"
       private: yes
+
+    - name: ADMIN_USERNAME
+      prompt: "Please enter an user name for the admin account"
+      default: "admin"
+      private: no
+
+    - name: ADMIN_PASSWORD
+      prompt: "Please enter a password for the admin account"
+      private: yes
+
+    - name: NORMAL_USERNAME
+      prompt: "Please enter a user name for the user account"
+      default: "ginka"
+      private: no
+
+    - name: NORMAL_PASSWORD
+      prompt: "Please enter a password for the user account"
+      private: yes
+
+    - name: TCP_PORT
+      prompt: "Port to listen to"
+      default: "80"
+      private: no
 
   tasks:
     - include_tasks: tasks/raspbian_common.yml
@@ -29,7 +54,9 @@
 
     - include_tasks: tasks/motioneye_install.yml
 
-    - include_tasks: tasks/configure_motion.yml
+    - include_tasks: tasks/motioneye_style.yml
+
+#    - include_tasks: tasks/motioneye_translate.yml
 
     - include_tasks: tasks/raspbian_add_utils.yml
 
