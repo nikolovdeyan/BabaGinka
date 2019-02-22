@@ -1,0 +1,1184 @@
+{% extends "base.html" %}
+
+{% macro config_item(config, depends="") -%}
+    <tr class="settings-item additional-config {% if config['advanced'] %}advanced-setting{% endif %}"
+            {% if config.get('reboot') and enable_reboot %}reboot="true"{% endif %}
+            {% if config.get('required') %}required="true"{% endif %}
+            {% if config.get('strip') %}strip="true"{% endif %}
+            {% if config.get('depends') %}depends="{{' '.join(config['depends'])}}{% if depends %} {{depends}}{% endif %}"{% endif %}
+            {% if config.get('min') is not none %}min="{{config['min']}}"{% endif %}
+            {% if config.get('max') is not none %}max="{{config['max']}}"{% endif %}
+            {% if config.get('floating') %}floating="true"{% endif %}
+            {% if config.get('sign') %}sign="true"{% endif %}
+            {% if config.get('snap') is not none %}snap="{{config['snap']}}"{% endif %}
+            {% if config.get('ticks') %}ticks="{{config['ticks']}}"{% endif %}
+            {% if config.get('ticksnum') is not none %}ticksnum="{{config['ticksnum']}}"{% endif %}
+            {% if config.get('decimals') is not none %}decimals="{{config['decimals']}}"{% endif %}
+            {% if config.get('unit') %}unit="{{config['unit']}}"{% endif %}
+            {% if config.get('validate') %}validate="{{config['validate']}}"{% endif %}>
+        {% if config['type'] == 'separator' %}
+        <td colspan="100"><div class="settings-item-separator"></div></td>
+        {% else %}
+        <td class="settings-item-label"><span class="settings-item-label">{{config['label']}}</span></td>
+        <td class="settings-item-value">
+            {% if config['type'] == 'str' %}
+                <input type="text" class="styled {{config['section']}} {% if config.get('camera') %}camera{% else %}main{% endif %}-config" id="{{config['name']}}Entry">
+                {% if config['unit'] %}<span class="settings-item-unit">{{config['unit']}}</span>{% endif %}
+            {% elif config['type'] == 'pwd' %}
+                <input type="password" class="styled {{config['section']}} {% if config.get('camera') %}camera{% else %}main{% endif %}-config" id="{{config['name']}}Entry">
+            {% elif config['type'] == 'number' %}
+                <input type="text" class="number styled {{config['section']}} {% if config.get('camera') %}camera{% else %}main{% endif %}-config" id="{{config['name']}}Entry">
+                {% if config['unit'] %}<span class="settings-item-unit">{{config['unit']}}</span>{% endif %}
+            {% elif config['type'] == 'range' %}
+                <input type="text" class="range styled {{config['section']}} {% if config.get('camera') %}camera{% else %}main{% endif %}-config" id="{{config['name']}}Slider">
+            {% elif config['type'] == 'bool' %}
+                <input type="checkbox" class="styled {{config['section']}} {% if config.get('camera') %}camera{% else %}main{% endif %}-config" id="{{config['name']}}Switch">
+            {% elif config['type'] == 'choices' %}
+                <select class="styled {{config['section']}} {% if config.get('camera') %}camera{% else %}main{% endif %}-config" id="{{config['name']}}Select">
+                    {% for choice in config['choices'] %}
+                    <option value="{{choice[0]}}">{{choice[1]}}</option>
+                    {% endfor %}
+                </select>
+                {% if config['unit'] %}<span class="settings-item-unit">{{config['unit']}}</span>{% endif %}
+            {% elif config['type'] == 'html' %}
+                <div class="html styled {{config['section']}} {% if config.get('camera') %}camera{% else %}main{% endif %}-config" id="{{config['name']}}Html"></div>
+            {% endif %}
+        </td>
+        <td>{% if config.get('description') %}<span class="help-mark" title="{{config['description']}}">?</span>{% endif %}</td>
+        {% endif %}
+    </tr>
+{%- endmacro %}
+
+{% block title %}{% if title %}{{title}}{% else %}{{hostname}}{% endif %}{% endblock %}
+
+{% block style %}
+    {{super()}}
+    <link rel="stylesheet" type="text/css" href="{{static_path}}css/ui.css?v={{version}}" />
+    <link rel="stylesheet" type="text/css" href="{{static_path}}css/main.css?v={{version}}" />
+    {% if frame %}
+        <link rel="stylesheet" type="text/css" href="{{static_path}}css/frame.css?v={{version}}" />
+    {% endif %}
+{% endblock %}
+
+{% block script %}
+    {{super()}}
+    <script type="text/javascript" src="{{static_path}}js/ui.js?v={{version}}"></script>
+    <script type="text/javascript" src="{{static_path}}js/main.js?v={{version}}"></script>
+    {% if frame %}
+        <script type="text/javascript" src="{{static_path}}js/frame.js?v={{version}}"></script>
+    {% endif %}
+    <script type="text/javascript">
+        var adminUsername = '{{admin_username}}';
+        var frame = {% if frame %}true{% else %}false{% endif %};
+        var hasLocalCamSupport = {% if has_motion %}true{% else %}false{% endif %};
+        var hasNetCamSupport = {% if has_motion %}true{% else %}false{% endif %};
+        {% if mask_width %}
+        var maskWidth = {{mask_width}};
+        {% endif %}
+    </script>
+{% endblock %}
+
+{% block body %}
+    {% if not frame %}
+    <div class="header">
+        <div class="header-container">
+            <div class="settings-top-bar closed">
+                <div class="button icon settings-button mouse-effect" title="settings"></div
+                ><div class="button icon logout-button mouse-effect" title="switch user"></div>
+                <select class="styled" id="cameraSelect" {% if not add_remove_cameras %}style="display: none;"{% endif %}></select>
+                <div class="button icon rem-camera-button mouse-effect" id="remCameraButton" title="remove camera" {% if not add_remove_cameras %}style="display: none;"{% endif %}></div>
+                <div class="button apply-button" id="applyButton">Приложи</div>
+                {% if hostname %}<div class="hostname">{{hostname}}</div>{% endif %}
+            </div>
+            <div class="logo">
+                <a href="">
+                    <span class="logo">motionEye</span>
+                    <img class="logo" src="{{static_path}}img/motioneye-logo.svg">
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% if not frame %}
+    <div class="page">
+        <div class="settings closed">
+            <div class="settings-container">
+                <!-- Preferences -->
+                <div class="settings-section-title" id="preferencesDiv">
+                    <span class="help-mark" title="Настройки на потребителя">?</span>
+                    <a class="settings-section-title">Настройки</a>
+                    <span class="minimize open"></span>
+                </div>
+                <table class="settings">
+                    <tr class="settings-item" min="1" max="4" snap="1" ticksnum="4" decimals="0" id="layoutColumnsRow">
+                        <td class="settings-item-label"><span class="settings-item-label">Бр. колони</span></td>
+                        <td class="settings-item-value"><input type="text" class="range styled prefs" id="layoutColumnsSlider"></td>
+                        <td><span class="help-mark" title="Конфигурира в колко колони да се изобразят наличните камери">?</span></td>
+                    </tr>
+                    <tr class="settings-item">
+                        <td class="settings-item-label"><span class="settings-item-label">Събери в екрана</span></td>
+                        <td class="settings-item-value"><input type="checkbox" class="styled prefs" id="fitFramesVerticallySwitch"></td>
+                        <td><span class="help-mark" title="Да се оразмерят ли изображенията, така че да се събират в екрана по вертикала">?</span></td>
+                    </tr>
+                    <tr class="settings-item" min="1" max="4" snap="1" ticksnum="4" decimals="0" id="layoutRows" depends="fitFramesVertically">
+                        <td class="settings-item-label"><span class="settings-item-label">Бр. редове</span></td>
+                        <td class="settings-item-value"><input type="text" class="range styled prefs" id="layoutRowsSlider"></td>
+                        <td><span class="help-mark" title="Конфигурира в колко реда да се изобразят наличните камери">?</span></td>
+                    </tr>
+                    <tr class="settings-item" min="0" max="100" snap="2" ticksnum="6" decimals="0">
+                        <td class="settings-item-label"><span class="settings-item-label">Оптимизация на кадри/сек</span></td>
+                        <td class="settings-item-value"><input type="text" class="range styled prefs" id="framerateDimmerSlider"></td>
+                        <td><span class="help-mark" title="замъглява кадрите, за да се спести трафик (не работи с обикновени MJPEG камери)">?</span></td>
+                    </tr>
+                    <tr class="settings-item" min="1" max="100" snap="2" ticks="1|20|40|60|80|100" decimals="0">
+                        <td class="settings-item-label"><span class="settings-item-label">Оптимизация на резолюция</span></td>
+                        <td class="settings-item-value"><input type="text" class="range styled prefs" id="resolutionDimmerSlider"></td>
+                        <td><span class="help-mark" title="намалява резолюцията на кадрите, за да се спести трафик (не работи с обикновени MJPEG камери)">?</span></td>
+                    </tr>
+                </table>
+
+                <tr class="settings-item advanced-setting">
+                    <td colspan="100"><div class="settings-item-separator" style="margin: 0px 0px 1.5em 0px;"></div></td>
+                </tr>
+
+                <!-- General Settings -->
+                <div class="settings-section-title" id="generalSectionDiv">
+                    <span class="help-mark" title="Общи настройки, не влияещи на отделните камери">?</span>
+                    <a class="settings-section-title">Общи настройки</a>
+                    <span class="minimize open"></span>
+                </div>
+                <table class="settings">
+                    <tr class="settings-item">
+                        <td class="settings-item-label"><span class="settings-item-label">Разширени настройки</span></td>
+                        <td class="settings-item-value"><input type="checkbox" class="styled general main-config" id="showAdvancedSwitch"></td>
+                        <td><span class="help-mark" title="Включете, за да се покажат всички настройки">?</span></td>
+                    </tr>
+                    <tr class="settings-item" required="true" strip="true">
+                        <td class="settings-item-label"><span class="settings-item-label">Потребителско име на админ</span></td>
+                        <td class="settings-item-value"><input type="text" class="styled general main-config" id="adminUsernameEntry" readonly="readonly"></td>
+                        <td><span class="help-mark" title="Потребителското име от което ще може да се правят настройки по системата">?</span></td>
+                    </tr>
+                    <tr class="settings-item" strip="true">
+                        <td class="settings-item-label"><span class="settings-item-label">Парола на админ</span></td>
+                        <td class="settings-item-value"><input type="password" class="styled general main-config" id="adminPasswordEntry"></td>
+                        <td><span class="help-mark" title="Парола за админ потребителското име">?</span></td>
+                    </tr>
+                    <tr class="settings-item" required="true" strip="true">
+                        <td class="settings-item-label"><span class="settings-item-label">Потребителско име на наблюдател</span></td>
+                        <td class="settings-item-value"><input type="text" class="styled general main-config" id="normalUsernameEntry"></td>
+                        <td><span class="help-mark" title="Потребителското име от което ще може да се гледат конфигурираните камери">?</span></td>
+                    </tr>
+                    <tr class="settings-item" strip="true">
+                        <td class="settings-item-label"><span class="settings-item-label">Парола на наблюдател</span></td>
+                        <td class="settings-item-value"><input type="password" class="styled general main-config" id="normalPasswordEntry"></td>
+                        <td><span class="help-mark" title="Парола за наблюдател (оставете празно за наблюдение без парола)">?</span></td>
+                    </tr>
+                    {% for config in main_sections.get('general', {}).get('configs', []) %}
+                        {{config_item(config)}}
+                    {% endfor %}
+                    <tr class="settings-item advanced-setting">
+                        <td colspan="100"><div class="settings-item-separator"></div></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting">
+                        <td class="settings-item-label"><span class="settings-item-label">motionEye версия</span></td>
+                        <td class="settings-item-value"><span class="settings-item-label">{{version}}</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting">
+                        <td class="settings-item-label"><span class="settings-item-label">Motion версия</span></td>
+                        <td class="settings-item-value"><span class="settings-item-label">{{motion_version}}</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting">
+                        <td class="settings-item-label"><span class="settings-item-label">Операционна система</span></td>
+                        <td class="settings-item-value"><span class="settings-item-label">{{os_version}}</span></td>
+                    </tr>
+                    {% if enable_update %}
+                    <tr class="settings-item advanced-setting">
+                        <td class="settings-item-label"><span class="settings-item-label">Софтуерно обновяване</span></td>
+                        <td class="settings-item-value"><div class="button normal-button update-button" id="updateButton">Check</div></td>
+                        <td><span class="help-mark" title="Проверява за нови версии и осъществява надграждането на системата">?</span></td>
+                    </tr>
+                    {% endif %}
+                    <tr class="settings-item advanced-setting{% if not enable_reboot %} hidden{% endif %}">
+                        <td class="settings-item-label"><span class="settings-item-label">Захранване</span></td>
+                        <td class="settings-item-value"><div class="button normal-button shut-down-button" id="shutDownButton">Изключи</div></td>
+                        <td><span class="help-mark" title="Изключва системата">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting{% if not enable_reboot %} hidden{% endif %}">
+                        <td class="settings-item-label"><span class="settings-item-label"></span></td>
+                        <td class="settings-item-value"><div class="button normal-button reboot-button" id="rebootButton">Рестартирай</div></td>
+                        <td><span class="help-mark" title="Рестартира системата">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting">
+                        <td colspan="100"><div class="settings-item-separator"></div></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting">
+                        <td class="settings-item-label"><span class="settings-item-label">Конфигурация</span></td>
+                        <td class="settings-item-value"><div class="button normal-button backup-button" id="backupButton">Запази</div></td>
+                        <td><span class="help-mark" title="Създава файл с резервно копие на конфигурацията за локално съхранение">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting">
+                        <td class="settings-item-label"><span class="settings-item-label"></span></td>
+                        <td class="settings-item-value"><div class="button normal-button restore-button" id="restoreButton">Възстанови</div></td>
+                        <td><span class="help-mark" title="Възстановява конфигурацията от предварително запазено копие">?</span></td>
+                    </tr>
+                </table>
+
+                <!-- Additional Main Sections -->
+                {% for section in main_sections.values() %}
+                {% if section.get('label') and section.get('configs') %}
+                <div class="settings-section-title {% if section['advanced'] %}advanced-setting{% endif %}">
+                    {% if section.get('onoff') %}<input type="checkbox" class="styled section additional-section {{section['name']}} main-config" id="{{section['name']}}Switch">{% endif %}
+                    {% if section.get('description') %}<span class="help-mark" title="{{section['description']}}">?</span>{% endif %}
+                    <a class="settings-section-title">{{section['label']}}</a>
+                    <span class="minimize {% if section.get('open') %}open{% endif %}"></span>
+                </div>
+                <table class="settings {% if section.get('advanced') %}advanced-setting{% endif %}">
+                    {% for config in section['configs'] %}
+                        {{config_item(config)}}
+                    {% endfor %}
+                </table>
+                {% endif %}
+                {% endfor %}
+
+                <tr class="settings-item advanced-setting">
+                    <td colspan="100"><div class="settings-item-separator" style="margin: 0px 0px 1.5em 0px;"></div></td>
+                </tr>
+
+                <!-- Video Device -->
+                <div class="settings-section-title" id="deviceSectionDiv">
+                    <input type="checkbox" class="styled section device camera-config" id="videoDeviceEnabledSwitch">
+                    <span class="help-mark" title="Включете, за да използвате тази камера">?</span>
+                    <a class="settings-section-title">Видео устройство</a>
+                    <span class="minimize open"></span>
+                </div>
+                <table class="settings">
+                    <tr class="settings-item" required="true" strip="true">
+                        <td class="settings-item-label"><span class="settings-item-label">Име</span></td>
+                        <td class="settings-item-value"><input type="text" class="styled device camera-config" id="deviceNameEntry" placeholder="camera name..."></td>
+                        <td><span class="help-mark" title="Наименование на това видео устройство">?</span></td>
+                    </tr>
+                    <tr class="settings-item" required="true" strip="true">
+                        <td class="settings-item-label"><span class="settings-item-label">ID</span></td>
+                        <td class="settings-item-value"><input type="text" class="styled device camera-config" id="deviceIdEntry" readonly="readonly"></td>
+                        <td><span class="help-mark" title="Идентификационен номер на тази камера">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting">
+                        <td class="settings-item-label"><span class="settings-item-label">Адрес</span></td>
+                        <td class="settings-item-value"><input type="text" class="styled device camera-config" id="deviceUrlEntry" readonly="readonly"></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting">
+                        <td class="settings-item-label"><span class="settings-item-label">Тип</span></td>
+                        <td class="settings-item-value"><input type="text" class="styled device camera-config" id="deviceTypeEntry" readonly="readonly"></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting">
+                        <td colspan="100"><div class="settings-item-separator"></div></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting">
+                        <td class="settings-item-label"><span class="settings-item-label">Автоматична яркост</span></td>
+                        <td class="settings-item-value"><input type="checkbox" class="styled device camera-config" id="autoBrightnessSwitch"></td>
+                        <td><span class="help-mark" title="Активира автоматична промяна на яркоста (препоръчително само за камери без хардуерно подобрение на яркостта)">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" min="0" max="100" snap="2" ticksnum="5" decimals="0" unit="%">
+                        <td class="settings-item-label"><span class="settings-item-label">Яркост</span></td>
+                        <td class="settings-item-value"><input type="text" class="range styled device camera-config" id="brightnessSlider"></td>
+                        <td><span class="help-mark" title="Задава желаното ниво на яркост за тази камера">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" min="0" max="100" snap="2" ticksnum="5" decimals="0" unit="%">
+                        <td class="settings-item-label"><span class="settings-item-label">Контраст</span></td>
+                        <td class="settings-item-value"><input type="text" class="range styled device camera-config" id="contrastSlider"></td>
+                        <td><span class="help-mark" title="Задава желаното ниво на контраст за тази камера">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" min="0" max="100" snap="2" ticksnum="5" decimals="0" unit="%">
+                        <td class="settings-item-label"><span class="settings-item-label">Наситеност</span></td>
+                        <td class="settings-item-value"><input type="text" class="range styled device camera-config" id="saturationSlider"></td>
+                        <td><span class="help-mark" title="Задава желаното ниво на наситеност на цвета за тази камера">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" min="0" max="100" snap="2" ticksnum="5" decimals="0" unit="%">
+                        <td class="settings-item-label"><span class="settings-item-label">Тон</span></td>
+                        <td class="settings-item-value"><input type="text" class="range styled device camera-config" id="hueSlider"></td>
+                        <td><span class="help-mark" title="Задава желаното ниво на цветовия тон за тази камера">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting">
+                        <td colspan="100"><div class="settings-item-separator"></div></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting">
+                        <td class="settings-item-label"><span class="settings-item-label">Видео резолюция</span></td>
+                        <td class="settings-item-value">
+                            <select class="video-resolution styled device camera-config" id="resolutionSelect">
+                            </select>
+                        </td>
+                        <td><span class="help-mark" title="Разделителната способност на заснемане (по-високите стойности ще дадат по-добро изображение, но ще имат нужда от повече процесорно време, повече място на диска и повече трафик при пренос през интернет">?</span></td>
+                    </tr>
+                    <tr class="settings-item" min="96" max="4096" required="true" depends="resolution=custom">
+                        <td class="settings-item-label"><span class="settings-item-label">Ширина</span></td>
+                        <td class="settings-item-value"><input type="text" class="styled number device camera-config" id="customWidthEntry"></td>
+                        <td><span class="help-mark" title="Въведете ширина на картината в пиксели">?</span></td>
+                    </tr>
+                    <tr class="settings-item" min="96" max="4096" required="true" depends="resolution=custom">
+                        <td class="settings-item-label"><span class="settings-item-label">Височина</span></td>
+                        <td class="settings-item-value"><input type="text" class="styled number device camera-config" id="customHeightEntry"></td>
+                        <td><span class="help-mark" title="Въведете височина на картината в пиксели">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting">
+                        <td class="settings-item-label"><span class="settings-item-label">Завъртане на екран</span></td>
+                        <td class="settings-item-value">
+                            <select class="rotation styled device camera-config" id="rotationSelect">
+                                <option value="0">0&deg;</option>
+                                <option value="90">90&deg;</option>
+                                <option value="180">180&deg;</option>
+                                <option value="270">270&deg;</option>
+                            </select>
+                        </td>
+                        <td><span class="help-mark" title="Използвайте, за да завъртите получената картина, в случай, че камерата е неправилно разположена">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" min="2" max="30" snap="0" ticks="2|5|10|15|20|25|30" decimals="0">
+                        <td class="settings-item-label"><span class="settings-item-label">Кадри/сек.</span></td>
+                        <td class="settings-item-value"><input type="text" class="range styled device camera-config" id="framerateSlider"></td>
+                        <td><span class="help-mark" title="Задава броят кадри, заснети от камерата всяка секунда (по-високите стойности ще дадат по-качествено видео, но ще имат нужда от повече процесорсно време, повече място на диска и повече трафик при пренос през интернет">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting">
+                        <td class="settings-item-label"><span class="settings-item-label">Допълн. настройки за Motion</span></td>
+                        <td class="settings-item-value"><textarea class="styled device camera-config" id="extraOptionsEntry" rows="3"></textarea></td>
+                        <td><span class="help-mark" title="Тук можете да добавите допълнителни параметри за Motion демонът (използвайте &quot;name value&quot; форматът, по една опция на ред">?</span></td>
+                    </tr>
+                    {% for config in camera_sections.get('device', {}).get('configs', []) %}
+                        {{config_item(config)}}
+                    {% endfor %}
+                </table>
+
+                <!-- File Storage -->
+                <div class="settings-section-title advanced-setting" id="storageSectionDiv">
+                    <span class="help-mark" title="Изберете къде и как да се съхраняват вашите файлове">?</span>
+                    <a class="settings-section-title">Съхранение на файлове</a>
+                    <span class="minimize"></span>
+                </div>
+                <table class="settings advanced-setting">
+                    <tr class="settings-item advanced-setting">
+                        <td class="settings-item-label"><span class="settings-item-label">Устройство за съхранение</span></td>
+                        <td class="settings-item-value">
+                            <select class="styled storage camera-config" id="storageDeviceSelect">
+                            </select>
+                        </td>
+                        <td><span class="help-mark" title="Устройството, където ще се съхраняват файловете със снимки и видео запис">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" required="true" depends="storageDevice=network-share" strip="true">
+                        <td class="settings-item-label"><span class="settings-item-label">Мрежов сървър</span></td>
+                        <td class="settings-item-value"><input type="text" class="styled storage camera-config" id="networkServerEntry"></td>
+                        <td><span class="help-mark" title="Адресът на мрежовия сървър (IP адрес или име на хост)">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" depends="storageDevice=network-share">
+                        <td class="settings-item-label"><span class="settings-item-label">SMB Protocol Version</span></td>
+                        <td class="settings-item-value">
+                            <select class="styled storage camera-config" id="networkSMBVerSelect">
+                                <option value="1.0">1.0</option>
+                                <option value="2.0">2.0</option>
+                                <option value="2.1">2.1</option>
+                                <option value="3.0">3.0</option>
+                                <option value="3.1.1">3.1.1</option>
+                            </select>
+                        </td>
+                        <td><span class="help-mark" title="selects the SMB version to be used (test the various options and see which one works best with your NAS)">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" required="true" depends="storageDevice=network-share" strip="true">
+                        <td class="settings-item-label"><span class="settings-item-label">Share Name</span></td>
+                        <td class="settings-item-value"><input type="text" class="styled storage camera-config" id="networkShareNameEntry"></td>
+                        <td><span class="help-mark" title="the name of the network share">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" depends="storageDevice=network-share" strip="true">
+                        <td class="settings-item-label"><span class="settings-item-label">Потребител</span></td>
+                        <td class="settings-item-value"><input type="text" class="styled storage camera-config" id="networkUsernameEntry"></td>
+                        <td><span class="help-mark" title="Потребителското име, което да бъде използвано за достъп до споделения мрежов дял (оставете празно, ако не е необходима аутентикация за достъп до мрежовия дял)">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" depends="storageDevice=network-share" strip="true">
+                        <td class="settings-item-label"><span class="settings-item-label">Парола</span></td>
+                        <td class="settings-item-value"><input type="password" class="styled storage camera-config" id="networkPasswordEntry"></td>
+                        <td><span class="help-mark" title="Паролата, която да бъде използвана за достъп до споделения мрежов дял (оставете празно, ако не е необходима аутентикация за достъп до мрежовия дял)">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" required="true" strip="true">
+                        <td class="settings-item-label"><span class="settings-item-label">Директория на root потребител</span></td>
+                        <td class="settings-item-value"><input type="text" class="styled storage camera-config" id="rootDirectoryEntry"></td>
+                        <td><span class="help-mark" title="Root директорията (на избраното устройство за съхранение), където файловете ще бъдат записвани">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" depends="storageDevice=network-share">
+                        <td class="settings-item-label"><span class="settings-item-label"></span></td>
+                        <td class="settings-item-value"><div class="button normal-button test-button" id="networkShareTestButton">Тествай услугата</div></td>
+                        <td><span class="help-mark" title="Натиснете този бутон, за да проверите мрежовата свързаност, след като сте попълнили всички необходими параметри">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting">
+                        <td colspan="100"><div class="settings-item-separator"></div></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting">
+                        <td class="settings-item-label"><span class="settings-item-label">Заето пространство на диска</span></td>
+                        <td class="settings-item-value">
+                            <div id="diskUsageProgressBar" class="progress-bar"></div>
+                        </td>
+                        <td><span class="help-mark" title="Показва заетото/свободно пространство на диска, на който се намира root директорията">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting">
+                        <td colspan="100"><div class="settings-item-separator"></div></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting">
+                        <td class="settings-item-label"><span class="settings-item-label">Качване на медия файлове</span></td>
+                        <td class="settings-item-value"><input type="checkbox" class="styled storage camera-config" id="uploadEnabledSwitch"></td>
+                        <td><span class="help-mark" title="Включете, в случай че искате медия файловете да бъдат качвани на външна услуга">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" depends="uploadEnabled">
+                        <td class="settings-item-label"><span class="settings-item-label">Качване на снимки</span></td>
+                        <td class="settings-item-value"><input type="checkbox" class="styled storage camera-config" id="uploadPictureSwitch"></td>
+                        <td><span class="help-mark" title="Включете, в случай че искате снимките да бъдат качвани на външна услуга">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" depends="uploadEnabled">
+                        <td class="settings-item-label"><span class="settings-item-label">Качване на видео</span></td>
+                        <td class="settings-item-value"><input type="checkbox" class="styled storage camera-config" id="uploadMovieSwitch"></td>
+                        <td><span class="help-mark" title="Включете, в случай че искате видео файловете да бъдат качвани на външна услуга">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" depends="uploadEnabled">
+                        <td class="settings-item-label"><span class="settings-item-label">Вид на услугата за качване</span></td>
+                        <td class="settings-item-value">
+                            <select class="styled storage camera-config" id="uploadServiceSelect">
+                                <option value="ftp">FTP Сървър</option>
+                                <option value="sftp">SFTP Server</option>
+<!--                                 <option value="http">HTTP Server</option> -->
+<!--                                 <option value="https">HTTPS Server</option> -->
+                                <option value="gdrive">Google Drive</option>
+                                <option value="dropbox">Dropbox</option>
+                            </select>
+                        </td>
+                        <td><span class="help-mark" title="Изберете услугата, която да се използва за качване на медия файловете">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" required="true" depends="uploadEnabled uploadService=(ftp|sftp|http|https)">
+                        <td class="settings-item-label"><span class="settings-item-label">Адрес на сървъра</span></td>
+                        <td class="settings-item-value"><input type="text" class="styled storage camera-config" id="uploadServerEntry"></td>
+                        <td><span class="help-mark" title="Домейн името или IP адресът на услугата за качване (напр. ftp.example.com или 192.168.1.3)">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" required="true" min="1" max="65535" depends="uploadEnabled uploadService=(ftp|sftp|http|https)">
+                        <td class="settings-item-label"><span class="settings-item-label">Порт на сървърa</span></td>
+                        <td class="settings-item-value"><input type="text" class="number styled storage camera-config" id="uploadPortEntry"></td>
+                        <td><span class="help-mark" title="Кой порт да се използва от услугата за качване (оставете празно, за стойността по подразбиране на съответната услуга)">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" depends="uploadEnabled uploadService=(http|https)">
+                        <td class="settings-item-label"><span class="settings-item-label">Метод на качване</span></td>
+                        <td class="settings-item-value">
+                            <select class="styled storage camera-config" id="uploadMethodSelect">
+                                <option value="post">POST</option>
+                                <option value="put">PUT</option>
+                            </select>
+                        </td>
+                        <td><span class="help-mark" title="HTTP методът, който да се използва при качване на файлове">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" required="true" depends="uploadEnabled">
+                        <td class="settings-item-label"><span class="settings-item-label">Локация на съхранение</span></td>
+                        <td class="settings-item-value"><input type="text" class="styled storage camera-config" id="uploadLocationEntry"></td>
+                        <td><span class="help-mark" title="Пътят (root path), където файловете ще бъдат качвани (напр. /files/cam1/)">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" depends="uploadEnabled">
+                        <td class="settings-item-label"><span class="settings-item-label">Включи поддиректории</span></td>
+                        <td class="settings-item-value"><input type="checkbox" class="styled storage camera-config" id="uploadSubfoldersSwitch"></td>
+                        <td><span class="help-mark" title="Включете, за да бъдат качвани медия файловете заедно с техните поддиректории, вместо всичко да бъде поставяно в root директорията">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" depends="uploadEnabled uploadService=(ftp|sftp|http|https)">
+                        <td class="settings-item-label"><span class="settings-item-label">Потребител</span></td>
+                        <td class="settings-item-value"><input type="text" class="styled storage camera-config" id="uploadUsernameEntry"></td>
+                        <td><span class="help-mark" title="Потребителското име за достъп до услугата за качване">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" depends="uploadEnabled uploadService=(ftp|sftp|http|https)">
+                        <td class="settings-item-label"><span class="settings-item-label">Парола</span></td>
+                        <td class="settings-item-value"><input type="password" class="styled storage camera-config" id="uploadPasswordEntry"></td>
+                        <td><span class="help-mark" title="Паролата за достъп до услугата за качване">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" depends="uploadEnabled uploadService=(gdrive|dropbox)">
+                        <td class="settings-item-label"><span class="settings-item-label">Ключ за ауторизация</span></td>
+                        <td class="settings-item-value"><input type="password" class="styled storage camera-config" id="uploadAuthorizationKeyEntry"></td>
+                        <td><span class="help-mark" title="Ключът за аутентикация в услугата за качване (обикновено е нужен само при първоначалното настройване на системата)">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" depends="uploadEnabled uploadService=(gdrive|dropbox)">
+                        <td class="settings-item-label"><span class="settings-item-label"></span></td>
+                        <td class="settings-item-value">
+                            <div class="html styled storage camera-config" id="authorizeLinkHtml">
+                                <a href="javascript:authorizeUpload()">Вземи ключ</a>
+                            </div>
+                        </td>
+                        <td><span class="help-mark" title="Натиснете, за да получите ключ за аутентикация със системата">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" depends="uploadEnabled">
+                        <td class="settings-item-label"><span class="settings-item-label"></span></td>
+                        <td class="settings-item-value"><div class="button normal-button test-button" id="uploadTestButton">Тествай услугата</div></td>
+                        <td><span class="help-mark" title="Натиснете този бутон, за да проверите конфигурацията, след като сте попълнили всички необходими параметри">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting">
+                        <td colspan="100"><div class="settings-item-separator"></div></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting">
+                        <td class="settings-item-label"><span class="settings-item-label">Повикай Web Hook</span></td>
+                        <td class="settings-item-value"><input type="checkbox" class="styled storage camera-config" id="webHookStorageEnabledSwitch"></td>
+                        <td><span class="help-mark" title="Включете, ако желаете да се извиква URL адрес след всяко създаване на медия файл">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" required="true" depends="webHookStorageEnabled" strip="true">
+                        <td class="settings-item-label"><span class="settings-item-label">Адрес на Web Hook</span></td>
+                        <td class="settings-item-value"><input type="text" class="styled storage camera-config" id="webHookStorageUrlEntry" placeholder="e.g. http://example.com/notify/"></td>
+                        <td><span class="help-mark" title="URL, до който да се отправя заявка всеки път, която бъде засечено движение; разрешени са следните tokens: %Y = година, %m = месец, %d = ден, %H = час, %M = минута, %S = секунда, %q = брой кадри, %v = брой събития, %f = локация на файл">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" depends="webHookStorageEnabled">
+                        <td class="settings-item-label"><span class="settings-item-label">HTTP метод</span></td>
+                        <td class="settings-item-value">
+                            <select class="styled storage camera-config" id="webHookStorageHttpMethodSelect">
+                                <option value="GET">GET</option>
+                                <option value="POST">POST (query)</option>
+                                <option value="POSTf">POST (form)</option>
+                                <option value="POSTj">POST (json)</option>
+                            </select>
+                        </td>
+                        <td><span class="help-mark" title="HTTP методът, който да се използва за извикването на web hook адреса (дадените URL параметри ще бъдат подадени както е показано тук)">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting">
+                        <td colspan="100"><div class="settings-item-separator"></div></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting">
+                        <td class="settings-item-label"><span class="settings-item-label">Изпълни команда</span></td>
+                        <td class="settings-item-value"><input type="checkbox" class="styled storage camera-config" id="commandStorageEnabledSwitch"></td>
+                        <td><span class="help-mark" title="Включете, ако желаете да се изпълнява команда след всяко създаване на медия файл">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" required="true" depends="commandStorageEnabled" strip="true">
+                        <td class="settings-item-label"><span class="settings-item-label">Команда</span></td>
+                        <td class="settings-item-value"><input type="text" class="styled storage camera-config" id="commandStorageEntry" placeholder="command..."></td>
+                        <td><span class="help-mark" title="Команда, която ще бъде изпълняване всеки път, когато се създаде нов медия файл; разделете с точка и запетая отделните команди ако те са повече от една; не използвайте точка и запетая в самите команди; позволени са следните специални параметри: %Y = година, %m = месец, %d = ден, %H = час, %M = минута, %S = секунда, %q = брой кадри, %v = брой събития, %f = локация на файл">?</span></td>
+                    </tr>
+                    {% for config in camera_sections.get('storage', {}).get('configs', []) %}
+                        {{config_item(config)}}
+                    {% endfor %}
+                </table>
+
+                <!-- Text Overlay -->
+                <div class="settings-section-title advanced-setting" id="textOverlaySectionDiv">
+                    <input type="checkbox" class="styled section text-overlay camera-config" id="textOverlayEnabledSwitch">
+                    <span class="help-mark" title="Изберете каква информация да се запечата върху заснетите кадри">?</span>
+                    <a class="settings-section-title">Надписи върху изображението</a>
+                    <span class="minimize"></span>
+                </div>
+                <table class="settings advanced-setting">
+                    <tr class="settings-item advanced-setting">
+                        <td class="settings-item-label"><span class="settings-item-label">Надпис вляво</span></td>
+                        <td class="settings-item-value">
+                            <select class="styled text-overlay camera-config" id="leftTextTypeSelect">
+                                <option value="camera-name">Име на камера</option>
+                                <option value="timestamp">Дата и час</option>
+                                <option value="custom-text">Текст</option>
+                                <option value="disabled">Без надпис</option>
+                            </select>
+                        </td>
+                        <td><span class="help-mark" title="Задава текстът, който да се изписва в долния ляв ъгъл на заснетите видео и снимкови кадри">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" required="true" depends="leftTextType=custom-text" strip="true">
+                        <td class="settings-item-label"></td>
+                        <td class="settings-item-value"><input type="text" class="styled text-overlay camera-config" id="leftTextEntry" placeholder="custom text..."></td>
+                        <td><span class="help-mark" title="Зададен от потребителя текст вляво; позволени са следните специални параметри: %Y = година, %m = месец, %d = ден, %H = час, %M = минута, %S = секунда, %q = брой кадри, %v = брой събития, %T = HH:MM:SS, \n = нов ред">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting">
+                        <td class="settings-item-label"><span class="settings-item-label">Надпис вдясно</span></td>
+                        <td class="settings-item-value">
+                            <select class="styled text-overlay camera-config" id="rightTextTypeSelect">
+                                <option value="camera-name">Име на камера</option>
+                                <option value="timestamp">Дата и час</option>
+                                <option value="custom-text">Текст</option>
+                                <option value="disabled">Без надпис</option>
+                            </select>
+                        </td>
+                        <td><span class="help-mark" title="Задава текстът, който да се изписва в долния десен ъгъл на заснетите видео и снимкови кадри">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" required="true" depends="rightTextType=custom-text" strip="true">
+                        <td class="settings-item-label"></td>
+                        <td class="settings-item-value"><input type="text" class="styled text-overlay camera-config" id="rightTextEntry" placeholder="custom text..."></td>
+                        <td><span class="help-mark" title="Зададен от потребителя текст вдясно; позволени са следните специални параметри: %Y = година, %m = месец, %d = ден, %H = час, %M = минута, %S = секунда, %q = брой кадри, %v = брой събития, %T = HH:MM:SS, \n = нов ред">?</span></td>
+                    </tr>
+                    {% for config in camera_sections.get('text-overlay', {}).get('configs', []) %}
+                        {{config_item(config)}}
+                    {% endfor %}
+                </table>
+
+                <!-- Video Streaming -->
+                <div class="settings-section-title" minimize-switch-independent="true" id="streamingSectionDiv">
+                    <input type="checkbox" class="styled section streaming camera-config" id="videoStreamingEnabledSwitch">
+                    <span class="help-mark" title="Включете, ако желаете да се осъществява стрийминг на видео от тази камера">?</span>
+                    <a class="settings-section-title">Стрийминг на видео</a>
+                    <span class="minimize"></span>
+                </div>
+                <table class="settings">
+                    <tr class="settings-item advanced-setting" min="1" max="30" snap="0" ticks="1|5|10|15|20|25|30" decimals="0">
+                        <td class="settings-item-label"><span class="settings-item-label">Кадри/сек.</span></td>
+                        <td class="settings-item-value"><input type="text" class="range styled streaming camera-config" id="streamingFramerateSlider"></td>
+                        <td><span class="help-mark" title="Задава броят кадри, който ще се изпращат всяка секунда при стрийминг">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" min="0" max="100" snap="2" ticksnum="5" decimals="0" unit="%">
+                        <td class="settings-item-label"><span class="settings-item-label">Качество на видеото</span></td>
+                        <td class="settings-item-value"><input type="text" class="range styled streaming camera-config" id="streamingQualitySlider"></td>
+                        <td><span class="help-mark" title="Задава качеството на изпращаното видео (по-високите стойности означават по-добро качество на видеото, но и по-голям трафик)">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting">
+                        <td class="settings-item-label"><span class="settings-item-label">Оразмеряване на кадрите</span></td>
+                        <td class="settings-item-value"><input type="checkbox" class="styled streaming camera-config" id="streamingServerResizeSwitch"></td>
+                        <td><span class="help-mark" title="Когато тази настройка е включена, кадрите биват оразмерявани преди изпращане (изключете ако процесорът на устройството е слаб)">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" min="0" max="100" snap="2" ticksnum="5" decimals="0" unit="%" depends="streamingServerResize">
+                        <td class="settings-item-label"><span class="settings-item-label">Стрийминг резолюция</span></td>
+                        <td class="settings-item-value"><input type="text" class="range styled streaming camera-config" id="streamingResolutionSlider"></td>
+                        <td><span class="help-mark" title="Разделителната способност, зададена като процент от разделителната способност на видео устройството (по-високите стойности означават по-добро качество на видеото, но и по-голям трафик">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" min="1024" max="65535" depends="videoStreamingEnabled" required="true">
+                        <td class="settings-item-label"><span class="settings-item-label">Порт за стрийминг</span></td>
+                        <td class="settings-item-value"><input type="text" class="styled streaming camera-config" id="streamingPortEntry"></td>
+                        <td><span class="help-mark" title="Задава TCP порт, на който ще слуша стрийминг сървъра на камерата">?</span></td>
+                    </tr>
+                    {% if has_streaming_auth %}
+                    <tr class="settings-item advanced-setting" depends="videoStreamingEnabled">
+                        <td class="settings-item-label"><span class="settings-item-label">Режим на аутентикация</span></td>
+                        <td class="settings-item-value">
+                            <select class="styled streaming camera-config" id="streamingAuthModeSelect">
+                                <option value="disabled">Изключен</option>
+                                <option value="basic">Основен</option>
+                                <option value="digest">Дайджест</option>
+                            </select>
+                        </td>
+                        <td><span class="help-mark" title="Методът на аутентикация, който потокът използва (изберете Основен вместо Дайджест, в случай на проблеми с приложения на трета страна); Ще бъдат ползвани потр. име и парола на наблюдател">?</span></td>
+                    </tr>
+                    {% endif %}
+                    <tr class="settings-item advanced-setting">
+                        <td class="settings-item-label"><span class="settings-item-label">Оптимизация при незасичане</span></td>
+                        <td class="settings-item-value"><input type="checkbox" class="styled streaming camera-config" id="streamingMotion"></td>
+                        <td><span class="help-mark" title="Включете, ако желаете по-ниска резолюция на стрийминг видето, когато не е засечено движение от Motion">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" depends="videoStreamingEnabled">
+                        <td colspan="100"><div class="settings-item-separator"></div></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting">
+                        <td class="settings-item-label"><span class="settings-item-label">Полезни адреси</span></td>
+                        <td class="settings-item-value">
+                            <div class="html styled streaming camera-config" id="streamingSnapshotUrlHtml">
+                                <a href="javascript:showSnapshotUrl()">Кадър</a>
+                            </div>
+                        </td>
+                        <td><span class="help-mark" title="URL, който показва последното заснето от камерата изображение">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting">
+                        <td class="settings-item-label"></td>
+                        <td class="settings-item-value">
+                            <div class="html styled streaming camera-config" id="streamingMjpgUrlHtml">
+                                <a href="javascript:showMjpgUrl()">Стрийминг</a>
+                            </div>
+                        </td>
+                        <td><span class="help-mark" title="URL, на който се предава MJPEG поток от камерата">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting">
+                        <td class="settings-item-label"></td>
+                        <td class="settings-item-value">
+                            <div class="html styled streaming camera-config" id="streamingEmbedUrlHtml">
+                                <a href="javascript:showEmbedUrl()">Вграждане</a>
+                            </div>
+                        </td>
+                        <td><span class="help-mark" title="URL, който дава минимален HTML документ, съдържащ потока от камерата, удобен за вграждане">?</span></td>
+                    </tr>
+                    {% for config in camera_sections.get('streaming', {}).get('configs', []) %}
+                        {{config_item(config)}}
+                    {% endfor %}
+                </table>
+
+                <!-- Still Images -->
+                <div class="settings-section-title" id="stillImagesSectionDiv">
+                    <input type="checkbox" class="styled section still-images camera-config" id="stillImagesEnabledSwitch">
+                    <span class="help-mark" title="Включете заснемане от камерата под формата на отделни изображения (снимки)">?</span>
+                    <a class="settings-section-title">Запис на снимки</a>
+                    <span class="minimize"></span>
+                </div>
+                <table class="settings">
+                    <tr class="settings-item advanced-setting" required="true" strip="true">
+                        <td class="settings-item-label"><span class="settings-item-label">Име на изображенията</span></td>
+                        <td class="settings-item-value"><input type="text" class="styled still-images camera-config" id="imageFileNameEntry" placeholder="file name pattern..."></td>
+                        <td><span class="help-mark" title="Задава схемата, по която се наименоват изображенията (JPEG файловете); позволени са следните специални параметри: %Y = година, %m = месец, %d = ден, %H = час, %M = минута, %S = секунда, %q = брой кадри, %v = брой събития, / = поддиректория">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" min="0" max="100" snap="2" ticksnum="5" decimals="0" unit="%">
+                        <td class="settings-item-label"><span class="settings-item-label">Качество на изображенията</span></td>
+                        <td class="settings-item-value"><input type="text" class="range styled still-images camera-config" id="imageQualitySlider"></td>
+                        <td><span class="help-mark" title="Задава качеството на JPEG изображенията (по-високите стойности дават по-добро качество, но се нуждаят от повече място на диска)">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting">
+                        <td class="settings-item-label"><span class="settings-item-label">Режим на заснемане</span></td>
+                        <td class="settings-item-value">
+                            <select class="styled still-images camera-config" id="captureModeSelect">
+                                <option value="motion-triggered">При засечено движение</option>
+                                <option value="motion-triggered-one">При засечено движение (една снимка)</option>
+                                <option value="interval-snapshots">Непрекъснато през интервал</option>
+                                <option value="all-frames">Непрекъснато всички кадри</option>
+                                <option value="manual">Ръчнo заснемане</option>
+                            </select>
+                        </td>
+                        <td><span class="help-mark" title="Задава режим на заснемане:
+                                         При засечено движение = заснема само когато е засечено движение от Motion,
+                                         Непрекъснато през интервал = заснема се изображение през определен период в секунди,
+                                         Всички кадри = запазва всеки кадър като файл с изображение,
+                                         Ръчно заснемане = при натискане на бутон от наблюдаващ потребител">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" min="1" max="86400" required="true" depends="captureMode=interval-snapshots">
+                        <td class="settings-item-label"><span class="settings-item-label">Интервал на заснемане</span></td>
+                        <td class="settings-item-value"><input type="text" class="styled number still-images camera-config" id="snapshotIntervalEntry"><span class="settings-item-unit">seconds</span></td>
+                        <td><span class="help-mark" title="Задава интервал (в секунди) между заснетите изображения">?</span></td>
+                    </tr>
+                    <tr class="settings-item">
+                        <td class="settings-item-label"><span class="settings-item-label">Запазване на изображенията</span></td>
+                        <td class="settings-item-value">
+                            <select class="styled still-images camera-config" id="preservePicturesSelect">
+                                <option value="1">Ден</option>
+                                <option value="7">Седмица</option>
+                                <option value="30">Месец</option>
+                                <option value="365">Година</option>
+                                <option value="0">Завинаги</option>
+                                <option value="-1">Друг</option>
+                            </select>
+                        </td>
+                        <td><span class="help-mark" title="Изображенията по-стари от указания интервал се изтриват, за да се пести дисково пространство">?</span></td>
+                    </tr>
+                    <tr class="settings-item" min="1" max="3650" depends="preservePictures=-1" required="true">
+                        <td class="settings-item-label"><span class="settings-item-label">Период на запазване</span></td>
+                        <td class="settings-item-value"><input type="text" class="styled number still-images camera-config" id="picturesLifetimeEntry"><span class="settings-item-unit">days</span></td>
+                        <td><span class="help-mark" title="Задава след колко дни изображенията ще бъдат автоматично изтривани">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting">
+                        <td class="settings-item-label"><span class="settings-item-label">Разреши ръчно заснемане</span></td>
+                        <td class="settings-item-value"><input type="checkbox" class="styled still-images camera-config" id="manualSnapshotsSwitch"></td>
+                        <td><span class="help-mark" title="Когато е включена, тази настройка позволява ръчно заснемане на изображения чрез бутон на камера прозореца">?</span></td>
+                    </tr>
+                    {% for config in camera_sections.get('still-images', {}).get('configs', []) %}
+                        {{config_item(config)}}
+                    {% endfor %}
+                </table>
+
+                <!-- Movies -->
+                <div class="settings-section-title" id="moviesSectionDiv">
+                    <input type="checkbox" class="styled section movies camera-config" id="moviesEnabledSwitch">
+                    <span class="help-mark" title="Включете заснемане от камерата, под формата на видео файлове">?</span>
+                    <a class="settings-section-title">Запис на видео</a>
+                    <span class="minimize"></span>
+                </div>
+                <table class="settings">
+                    <tr class="settings-item advanced-setting" required="true" strip="true">
+                        <td class="settings-item-label"><span class="settings-item-label">Наименование на видео файловете</span></td>
+                        <td class="settings-item-value"><input type="text" class="styled movies camera-config" id="movieFileNameEntry" placeholder="file name pattern..."></td>
+                        <td><span class="help-mark" title="Задава схемата, по която се наименоват видео файловете; позволени са следните специални параметри: %Y = година, %m = месец, %d = ден, %H = час, %M = минута, %S = секунда, %q = брой кадри, %v = брой събития, / = поддиректория">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting">
+                        <td class="settings-item-label"><span class="settings-item-label">Формат на видеото</span></td>
+                        <td class="settings-item-value">
+                            <select class="styled movies camera-config" id="movieFormatSelect">
+                                <option value="mpeg4">MPEG4 (.avi)</option>
+                                <option value="msmpeg4">MSMPEG4v2 (.avi)</option>
+                                <option value="swf">Small Web Format (.swf)</option>
+                                <option value="flv">Flash Video (.flv)</option>
+                                <option value="mov">QuickTime (.mov)</option>
+                                {% if has_new_movie_format_support %}
+                                <option value="mp4">H.264 (.mp4)</option>
+                                {% if has_h264_omx_support %}
+                                <option value="mp4:h264_omx">H.264/OMX (.mp4)</option>
+                                {% endif %}
+                                <option value="hevc">HEVC (.mp4)</option>
+                                <option value="mkv">Matroska Video (.mkv)</option>
+                                {% if has_h264_omx_support %}
+                                <option value="mkv:h264_omx">Matroska Video/OMX (.mkv)</option>
+                                {% endif %}
+                                {% endif %}
+                            </select>
+                        </td>
+                        <td><span class="help-mark" title="Задава файловият формат на видеото. Не е гарантирана работата на всички формати на всички възможни системи; ако не сте сигурни, проверете всички формати и изберете този, който работи най-добре за вашата система">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" min="0" max="100" snap="2" ticksnum="5" decimals="0" unit="%">
+                        <td class="settings-item-label"><span class="settings-item-label">Качество на заснемане</span></td>
+                        <td class="settings-item-value"><input type="text" class="range styled movies camera-config" id="movieQualitySlider"></td>
+                        <td><span class="help-mark" title="Задава качеството на заснетото MPEG видео (по-високите стойности дават по-добро качество, но се нуждаят от повече място на диска)">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting">
+                        <td class="settings-item-label"><span class="settings-item-label">Режим на запис</span></td>
+                        <td class="settings-item-value">
+                            <select class="styled movies camera-config" id="recordingModeSelect">
+                                <option value="motion-triggered">При засечено движение</option>
+                                <option value="continuous">Постоянен запис</option>
+                            </select>
+                        </td>
+                        <td><span class="help-mark" title="Задава режим на запис: При засечено движение = създава се ново видео всеки път, когато се засече движение от Motion. Постоянен запис = записът се осъществява в един голям видео файл">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" min="0" max="86400" required="true">
+                        <td class="settings-item-label"><span class="settings-item-label">Макс. дължина на видео</span></td>
+                        <td class="settings-item-value"><input type="text" class="number styled movies camera-config" id="maxMovieLengthEntry"><span class="settings-item-unit">seconds</span></td>
+                        <td><span class="help-mark" title="Задава максималната дължина на видео в секунди; ако Motion събитието продължава по-дълго, се създава ново видео; използвайте 0 за неограничена дължина">?</span></td>
+                    </tr>
+                    <tr class="settings-item">
+                        <td class="settings-item-label"><span class="settings-item-label">Запазване на видео</span></td>
+                        <td class="settings-item-value">
+                            <select class="styled movies camera-config" id="preserveMoviesSelect">
+                                <option value="1">Ден</option>
+                                <option value="7">Седмица</option>
+                                <option value="30">Месец</option>
+                                <option value="365">Година</option>
+                                <option value="0">Завинаги</option>
+                                <option value="-1">Друг</option>
+                            </select>
+                        </td>
+                        <td><span class="help-mark" title="Записи по-стари от указаният период се изтриват, за да се пести дисково пространство">?</span></td>
+                    </tr>
+                    <tr class="settings-item" min="1" max="3650" depends="preserveMovies=-1" required="true">
+                        <td class="settings-item-label"><span class="settings-item-label">Период за запазване</span></td>
+                        <td class="settings-item-value"><input type="text" class="styled number movies camera-config" id="moviesLifetimeEntry"><span class="settings-item-unit">days</span></td>
+                        <td><span class="help-mark" title="Задава броят дни, след който видео файловете ще се изтрият, за да се пести дисково пространство">?</span></td>
+                    </tr>
+                    {% for config in camera_sections.get('movies', {}).get('configs', []) %}
+                        {{config_item(config)}}
+                    {% endfor %}
+                </table>
+
+                <!-- Motion Detection -->
+                <div class="settings-section-title advanced-setting" id="motionDetectionSectionDiv">
+                    <input type="checkbox" class="styled section motion-detection camera-config" id="motionDetectionEnabledSwitch">
+                    <span class="help-mark" title="Включете, за да конфигурирате и използвате механизъм за засичане на движение">?</span>
+                    <a class="settings-section-title">Засичане на движение</a>
+                    <span class="minimize"></span>
+                </div>
+                <table class="settings advanced-setting">
+                    <tr class="settings-item advanced-setting" min="0" max="20" snap="0" ticksnum="5" decimals="1" unit="%">
+                        <td class="settings-item-label"><span class="settings-item-label">Праг на промяна в кадъра</span></td>
+                        <td class="settings-item-value"><input type="text" class="range styled motion-detection camera-config" id="frameChangeThresholdSlider"></td>
+                        <td><span class="help-mark" title="Задава минималният процент от изображението, който трябва да се промени между два съседни кадъра, за да се активира събитие за засечено движение (по-малките стойности дават по-чуствителен праг, но за сметка на евентуални фалшиви събития)">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting">
+                        <td class="settings-item-label"><span class="settings-item-label">Авто ниво на шум</span></td>
+                        <td class="settings-item-value"><input type="checkbox" class="styled motion-detection camera-config" id="autoNoiseDetectSwitch"></td>
+                        <td><span class="help-mark" title="Включете, за да бъде нивото на шум в картината автоматично регулирано">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" min="0" max="25" snap="0" ticksnum="6" decimals="0" unit="%" depends="!autoNoiseDetect">
+                        <td class="settings-item-label"><span class="settings-item-label">Ниво на шум</span></td>
+                        <td class="settings-item-value"><input type="text" class="range styled motion-detection camera-config" id="noiseLevelSlider"></td>
+                        <td><span class="help-mark" title="Задайте ръчно нивото на шум в картината">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" min="0" max="100" snap="2" ticksnum="5" decimals="0" unit="%">
+                        <td class="settings-item-label"><span class="settings-item-label">Засичай включено осветление</span></td>
+                        <td class="settings-item-value"><input type="text" class="range styled motion-detection camera-config" id="lightSwitchDetectSlider"></td>
+                        <td><span class="help-mark" title="Задава минималният процент от изображението, който трябва да се промени, така че събитието да се третира като внезапна промяна в осветеността, а не като засечено движение (0% изключва тази функция)">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting">
+                        <td class="settings-item-label"><span class="settings-item-label">Филтър за прашинки</span></td>
+                        <td class="settings-item-value"><input type="checkbox" class="styled motion-detection camera-config" id="despeckleFilterSwitch"></td>
+                        <td><span class="help-mark" title="Включете, за да се прилага филтър за изчистване на прашинки от кадрите, преди да се анализират за движение">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting">
+                        <td colspan="100"><div class="settings-item-separator"></div></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" min="0" max="86400" required="true">
+                        <td class="settings-item-label"><span class="settings-item-label">Пауза след заснемане</span></td>
+                        <td class="settings-item-value"><input type="text" class="number styled motion-detection camera-config" id="eventGapEntry"><span class="settings-item-unit">seconds</span></td>
+                        <td><span class="help-mark" title="Задава период след края на motion събитие (в секунди), през който няма да се засича движение">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" min="0" max="1000" required="true">
+                        <td class="settings-item-label"><span class="settings-item-label">Кадри преди</span></td>
+                        <td class="settings-item-value"><input type="text" class="number styled motion-detection camera-config" id="preCaptureEntry"><span class="settings-item-unit">frames</span></td>
+                        <td><span class="help-mark" title="Задава броят кадри, които трябва да бъдат заснети (и включени във видео) преди да бъде предизвикано motion събитие">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" min="0" max="1000" required="true">
+                        <td class="settings-item-label"><span class="settings-item-label">Кадри след</span></td>
+                        <td class="settings-item-value"><input type="text" class="number styled motion-detection camera-config" id="postCaptureEntry"><span class="settings-item-unit">frames</span></td>
+                        <td><span class="help-mark" title="Задава броят кадри, които трябва да бъдат заснети (и включени във видео) след края на motion събитие">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" min="1" max="1000" required="true">
+                        <td class="settings-item-label"><span class="settings-item-label">Мин. брой кадри за активиране</span></td>
+                        <td class="settings-item-value"><input type="text" class="number styled motion-detection camera-config" id="minimumMotionFramesEntry"><span class="settings-item-unit">frames</span></td>
+                        <td><span class="help-mark" title="Задава броят на последнователни motion кадри, който са необходими за да се предизвика motion събитие">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting">
+                        <td colspan="100"><div class="settings-item-separator"></div></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting">
+                        <td class="settings-item-label"><span class="settings-item-label">Маска</span></td>
+                        <td class="settings-item-value"><input type="checkbox" class="styled motion-detection camera-config" id="maskSwitch"></td>
+                        <td><span class="help-mark" title="Разрешава използването на маска за по-прецизен контрол върху засичането на движение">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" depends="mask">
+                        <td class="settings-item-label"><span class="settings-item-label">Вид маска</span></td>
+                        <td class="settings-item-value">
+                            <select class="styled motion-detection camera-config" id="maskTypeSelect">
+                                <option value="smart">Интелигентна</option>
+                                <option value="editable">Редактируема</option>
+                            </select>
+                        </td>
+                        <td><span class="help-mark" title="Интелигентната маска автоматично намира регионите с постоянно движение и динамично изгражда вътрешна маска, докато редактируемата дава възможност на потребителя да посочи такава">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" min="1" max="10" snap="1" ticksnum="10" decimals="0" unit="" depends="mask maskType=smart">
+                        <td class="settings-item-label"><span class="settings-item-label">Забавяне на интелигентната маска</span></td>
+                        <td class="settings-item-value"><input type="text" class="range styled motion-detection camera-config" id="smartMaskSluggishnessSlider"></td>
+                        <td><span class="help-mark" title="По-ниските стойности означават по-дълготрайна интелигентна маска с по-бавен процес на изграждане">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" depends="mask maskType=editable">
+                        <td class="settings-item-label"><span class="settings-item-label"></span></td>
+                        <td class="settings-item-value">
+                            <div class="button normal-button edit-mask-button" id="editMaskButton">Промени маската</div>
+                            <div class="button normal-button save-mask-button" id="saveMaskButton">Запази маската</div>
+                            <input type="text" class="motion-detection camera-config" id="maskLinesEntry">
+                        </td>
+                        <td><span class="help-mark" title="Натиснете, за да включите/изключите редактора за маска">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" depends="mask maskType=editable">
+                        <td class="settings-item-label"><span class="settings-item-label"></span></td>
+                        <td class="settings-item-value"><div class="button normal-button clear-mask-button" id="clearMaskButton">Изчисти маската</div></td>
+                        <td><span class="help-mark" title="Натиснете, за да изчистите текущата маска">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting">
+                        <td colspan="100"><div class="settings-item-separator"></div></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting">
+                        <td class="settings-item-label"><span class="settings-item-label">Покажи зоната на промяна</span></td>
+                        <td class="settings-item-value"><input type="checkbox" class="styled motion-detection camera-config" id="showFrameChangesSwitch"></td>
+                        <td><span class="help-mark" title="Ако тази опция е активирана, промените в кадрите (брой пиксели и площ) се изобразяват във видеото; временно включете тази опция, докато наствойвате параметрите за засичане на движение">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting">
+                        <td class="settings-item-label"><span class="settings-item-label">Прави файлове за дебъгване</span></td>
+                        <td class="settings-item-value"><input type="checkbox" class="styled motion-detection camera-config" id="createDebugMediaSwitch"></td>
+                        <td><span class="help-mark" title="Ако тази опция е активирана, ще се създават специални медия файлове, с цел дебъгване на проблеми със засичането на движение">?</span></td>
+                    </tr>
+                    {% for config in camera_sections.get('motion-detection', {}).get('configs', []) %}
+                        {{config_item(config)}}
+                    {% endfor %}
+                </table>
+
+                <!-- Motion Notifications -->
+                <div class="settings-section-title advanced-setting" id="notificationsSectionDiv">
+                    <span class="help-mark" title="enable this if you want to be notified when motion is detected">?</span>
+                    <a class="settings-section-title">Нотификации за движение</a>
+                    <span class="minimize"></span>
+                </div>
+                <table class="settings">
+                    <tr class="settings-item advanced-setting" depends="motionDetectionEnabled">
+                        <td class="settings-item-label"><span class="settings-item-label">По електронна поща</span></td>
+                        <td class="settings-item-value"><input type="checkbox" class="styled notifications camera-config" id="emailNotificationsEnabledSwitch"></td>
+                        <td><span class="help-mark" title="Включете, ако желаете да получавате имейл при засичане на движение">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" required="true" depends="emailNotificationsEnabled motionDetectionEnabled" strip="true">
+                        <td class="settings-item-label"><span class="settings-item-label">Имейл адреси</span></td>
+                        <td class="settings-item-value"><input type="text" class="styled notifications camera-config" id="emailAddressesEntry" placeholder="email addresses..."></td>
+                        <td><span class="help-mark" title="Адресите (разделени със запетая), добавени тук ще получават съобщение всеки път, когато е засечено движение">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" required="true" depends="emailNotificationsEnabled motionDetectionEnabled" strip="true">
+                        <td class="settings-item-label"><span class="settings-item-label">SMTP сървър</span></td>
+                        <td class="settings-item-value"><input type="text" class="styled notifications camera-config" id="smtpServerEntry" placeholder="e.g. smtp.gmail.com"></td>
+                        <td><span class="help-mark" title="Въведете хост името или IP адреса на вашия SMTP сървър (За gmail използвайте smtp.gmail.com)">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" min="1" max="65535" depends="emailNotificationsEnabled motionDetectionEnabled" required="true">
+                        <td class="settings-item-label"><span class="settings-item-label">SMTP порт</span></td>
+                        <td class="settings-item-value"><input type="text" class="styled number notifications camera-config" id="smtpPortEntry" placeholder="e.g. 587"></td>
+                        <td><span class="help-mark" title="въведете портът, използван от вашия SMTP сървър (обикновено 465 за non-TLS връзки и 587 за TLS връзки)">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" depends="emailNotificationsEnabled motionDetectionEnabled" strip="true">
+                        <td class="settings-item-label"><span class="settings-item-label">SMTP имейл адрес</span></td>
+                        <td class="settings-item-value"><input type="text" class="styled notifications camera-config" id="smtpAccountEntry" placeholder="account@gmail.com..."></td>
+                        <td><span class="help-mark" title="Въведете вашият SMTP акаунт (обикновено името на адреса на пощенската кутия)">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" depends="emailNotificationsEnabled motionDetectionEnabled" strip="true">
+                        <td class="settings-item-label"><span class="settings-item-label">SMTP Парола</span></td>
+                        <td class="settings-item-value"><input type="password" class="styled notifications camera-config" id="smtpPasswordEntry"></td>
+                        <td><span class="help-mark" title="Въведете вашата SMTP парола (за Gmail използвайте своята Google парола или тази, генерирана от съответното приложение)">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" depends="emailNotificationsEnabled motionDetectionEnabled" strip="true">
+                        <td class="settings-item-label"><span class="settings-item-label">Имейл адрес на подателя</span></td>
+                        <td class="settings-item-value"><input type="text" class="styled notifications camera-config" id="emailFromEntry" placeholder="email address..."></td>
+                        <td><span class="help-mark" title="Задава подател, ако вашата SMTP услуга изисква такъв (ако е оставено празно ще бъде използван първият адрес на получател)">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" depends="emailNotificationsEnabled motionDetectionEnabled">
+                        <td class="settings-item-label"><span class="settings-item-label">Използвай TLS</span></td>
+                        <td class="settings-item-value"><input type="checkbox" class="styled notifications camera-config" id="smtpTlsSwitch"></td>
+                        <td><span class="help-mark" title="Включете ако вашият SMTP сървър се нуждае от TLS (Gmail се нуждае от това, за да може да бъде ползван)">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" min="0" max="60" required="true" depends="emailNotificationsEnabled motionDetectionEnabled">
+                        <td class="settings-item-label"><span class="settings-item-label">Период за изпращане на писма със снимки</span></td>
+                        <td class="settings-item-value"><input type="text" class="number styled notifications camera-config" id="emailPictureTimeSpanEntry"><span class="settings-item-unit">seconds</span></td>
+                        <td><span class="help-mark" title="Задава интервал за търсене, който ще се използва при създаването на имейл прикачени файлове (по-високите стойности генерират писма с повече снимки и по-голям период на нотификация); задайте 0 за да изключите прикачването на снимки; записът на снимки трябва да е активиран, за да работи тази настойка">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" depends="emailNotificationsEnabled motionDetectionEnabled">
+                        <td class="settings-item-label"><span class="settings-item-label"></span></td>
+                        <td class="settings-item-value"><div class="button normal-button test-button" id="emailTestButton">Тествай услугата</div></td>
+                        <td><span class="help-mark" title="Натиснете този бутон, за да проверите конфигурацията, след като сте попълнили всички необходими параметри">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" depends="motionDetectionEnabled">
+                        <td colspan="100"><div class="settings-item-separator"></div></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" depends="motionDetectionEnabled">
+                        <td class="settings-item-label"><span class="settings-item-label">Повикай Web Hook</span></td>
+                        <td class="settings-item-value"><input type="checkbox" class="styled notifications camera-config" id="webHookNotificationsEnabledSwitch"></td>
+                        <td><span class="help-mark" title="Включете, ако желаете да се извиква URL адрес при всяко засичане на движение">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" required="true" depends="webHookNotificationsEnabled motionDetectionEnabled" strip="true">
+                        <td class="settings-item-label"><span class="settings-item-label">Адрес на Web Hook</span></td>
+                        <td class="settings-item-value"><input type="text" class="styled notifications camera-config" id="webHookNotificationsUrlEntry" placeholder="e.g. http://example.com/notify/"></td>
+                        <td><span class="help-mark" title="URL, до който да се отправя заявка всеки път, която бъде засечено движение; разрешени са следните tokens: %Y = година, %m = месец, %d = ден, %H = час, %M = минута, %S = секунда, %q = брой кадри, %v = брой събития">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" depends="webHookNotificationsEnabled motionDetectionEnabled">
+                        <td class="settings-item-label"><span class="settings-item-label">HTTP Метод</span></td>
+                        <td class="settings-item-value">
+                            <select class="styled notifications camera-config" id="webHookNotificationsHttpMethodSelect">
+                                <option value="GET">GET</option>
+                                <option value="POST">POST (query)</option>
+                                <option value="POSTf">POST (form)</option>
+                                <option value="POSTj">POST (json)</option>
+                            </select>
+                        </td>
+                        <td><span class="help-mark" title="HTTP методът, който да се използва за извикването на web hook адреса (дадените URL параметри ще бъдат подадени както е показано тук)">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" depends="motionDetectionEnabled">
+                        <td colspan="100"><div class="settings-item-separator"></div></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" depends="motionDetectionEnabled">
+                        <td class="settings-item-label"><span class="settings-item-label">Изпълни команда</span></td>
+                        <td class="settings-item-value"><input type="checkbox" class="styled notifications camera-config" id="commandNotificationsEnabledSwitch"></td>
+                        <td><span class="help-mark" title="Включете, ако желаете да се изпълнява команда при всяко засичане на движение">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" required="true" depends="commandNotificationsEnabled motionDetectionEnabled" strip="true">
+                        <td class="settings-item-label"><span class="settings-item-label">Команда</span></td>
+                        <td class="settings-item-value"><input type="text" class="styled notifications camera-config" id="commandNotificationsEntry" placeholder="command..."></td>
+                        <td><span class="help-mark" title="Команда, която ще бъде изпълняване всеки път, когато е засечено движение; разделете с точка и запетая отделните команди ако те са повече от една; не използвайте точка и запетая в самите команди; позволени са следните специални параметри: %Y = година, %m = месец, %d = дата, %H = час, %M = минута, %S = секунда, %q = брой кадри, %v = брой събития">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" depends="motionDetectionEnabled">
+                        <td colspan="100"><div class="settings-item-separator"></div></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" depends="motionDetectionEnabled">
+                        <td class="settings-item-label"><span class="settings-item-label">Изпълни финална команда</span></td>
+                        <td class="settings-item-value"><input type="checkbox" class="styled notifications camera-config" id="commandEndNotificationsEnabledSwitch"></td>
+                        <td><span class="help-mark" title="Включете, ако искате да настроите команда, която да се изпълнява в края на всяко motion събитие">?</span></td>
+                    </tr>
+                    <tr class="settings-item advanced-setting" required="true" depends="commandEndNotificationsEnabled motionDetectionEnabled" strip="true">
+                        <td class="settings-item-label"><span class="settings-item-label">Команда</span></td>
+                        <td class="settings-item-value"><input type="text" class="styled notifications camera-config" id="commandEndNotificationsEntry" placeholder="command..."></td>
+                        <td><span class="help-mark" title="Команда, която ще се изпълнява в края на всяко motion събитие; разделете с точка и запетая отделните команди ако те са повече от една; не използвайте точка и запетая в самите команди; позволени са следните специални параметри: %Y = година, %m = месец, %d = дата, %H = час, %M = минута, %S = секунда, %q = брой кадри">?</span></td>
+                    </tr>
+                    {% for config in camera_sections.get('notifications', {}).get('configs', []) %}
+                        {{config_item(config, "motionDetectionEnabled")}}
+                    {% endfor %}
+                </table>
+
+                <!-- Working Schedule -->
+                <div class="settings-section-title" depends="motionDetectionEnabled" id="workingScheduleSectionDiv">
+                    <input type="checkbox" class="styled section working-schedule camera-config" id="workingScheduleEnabledSwitch">
+                    <span class="help-mark" title="Включете, за да укажете седмично работно време за засичане на движение">?</span>
+                    <a class="settings-section-title">Работно време</a>
+                    <span class="minimize"></span>
+                </div>
+                <table class="settings">
+                    <tr class="settings-item" depends="motionDetectionEnabled">
+                        <td class="settings-item-label"><span class="settings-item-label">Понеделник</span></td>
+                        <td class="settings-item-value">
+                            <input type="checkbox" class="styled working-schedule camera-config" id="mondayEnabledSwitch">
+                            <span class="settings-item-unit time">от</span><input type="text" class="styled working-schedule time camera-config" id="mondayFromEntry">
+                            <span class="settings-item-unit time">до</span><input type="text" class="styled working-schedule time camera-config" id="mondayToEntry">
+                        </td>
+                        <td><span class="help-mark" title="Задава интервал на работно време за понеделник">?</span></td>
+                    </tr>
+                    <tr class="settings-item" depends="motionDetectionEnabled">
+                        <td class="settings-item-label"><span class="settings-item-label">Вторник</span></td>
+                        <td class="settings-item-value">
+                            <input type="checkbox" class="styled working-schedule camera-config" id="tuesdayEnabledSwitch">
+                            <span class="settings-item-unit time">от</span><input type="text" class="styled working-schedule time camera-config" id="tuesdayFromEntry">
+                            <span class="settings-item-unit time">до</span><input type="text" class="styled working-schedule time camera-config" id="tuesdayToEntry">
+                        </td>
+                        <td><span class="help-mark" title="Задава интервал на работно време за вторник">?</span></td>
+                    </tr>
+                    <tr class="settings-item" depends="motionDetectionEnabled">
+                        <td class="settings-item-label"><span class="settings-item-label">Сряда</span></td>
+                        <td class="settings-item-value">
+                            <input type="checkbox" class="styled working-schedule camera-config" id="wednesdayEnabledSwitch">
+                            <span class="settings-item-unit time">от</span><input type="text" class="styled working-schedule time camera-config" id="wednesdayFromEntry">
+                            <span class="settings-item-unit time">до</span><input type="text" class="styled working-schedule time camera-config" id="wednesdayToEntry">
+                        </td>
+                        <td><span class="help-mark" title="Задава интервал на работно време за сряда">?</span></td>
+                    </tr>
+                    <tr class="settings-item" depends="motionDetectionEnabled">
+                        <td class="settings-item-label"><span class="settings-item-label">Четвъртък</span></td>
+                        <td class="settings-item-value">
+                            <input type="checkbox" class="styled working-schedule camera-config" id="thursdayEnabledSwitch">
+                            <span class="settings-item-unit time">от</span><input type="text" class="styled working-schedule time camera-config" id="thursdayFromEntry">
+                            <span class="settings-item-unit time">до</span><input type="text" class="styled working-schedule time camera-config" id="thursdayToEntry">
+                        </td>
+                        <td><span class="help-mark" title="Задава интервал на работно време за четвъртък">?</span></td>
+                    </tr>
+                    <tr class="settings-item" depends="motionDetectionEnabled">
+                        <td class="settings-item-label"><span class="settings-item-label">Петък</span></td>
+                        <td class="settings-item-value">
+                            <input type="checkbox" class="styled working-schedule camera-config" id="fridayEnabledSwitch">
+                            <span class="settings-item-unit time">от</span><input type="text" class="styled working-schedule time camera-config" id="fridayFromEntry">
+                            <span class="settings-item-unit time">до</span><input type="text" class="styled working-schedule time camera-config" id="fridayToEntry">
+                        </td>
+                        <td><span class="help-mark" title="Задава интервал на работно време за петък">?</span></td>
+                    </tr>
+                    <tr class="settings-item" depends="motionDetectionEnabled">
+                        <td class="settings-item-label"><span class="settings-item-label">Събота</span></td>
+                        <td class="settings-item-value">
+                            <input type="checkbox" class="styled working-schedule camera-config" id="saturdayEnabledSwitch">
+                            <span class="settings-item-unit time">от</span><input type="text" class="styled working-schedule time camera-config" id="saturdayFromEntry">
+                            <span class="settings-item-unit time">до</span><input type="text" class="styled working-schedule time camera-config" id="saturdayToEntry">
+                        </td>
+                        <td><span class="help-mark" title="Задава интервал на работно време за събота">?</span></td>
+                    </tr>
+                    <tr class="settings-item" depends="motionDetectionEnabled">
+                        <td class="settings-item-label"><span class="settings-item-label">Неделя</span></td>
+                        <td class="settings-item-value">
+                            <input type="checkbox" class="styled working-schedule camera-config" id="sundayEnabledSwitch">
+                            <span class="settings-item-unit time">от</span><input type="text" class="styled working-schedule time camera-config" id="sundayFromEntry">
+                            <span class="settings-item-unit time">до</span><input type="text" class="styled working-schedule time camera-config" id="sundayToEntry">
+                        </td>
+                        <td><span class="help-mark" title="Задава интервал на работно време за неделя">?</span></td>
+                    </tr>
+                    <tr class="settings-item" depends="motionDetectionEnabled">
+                        <td class="settings-item-label"><span class="settings-item-label">Засичай движение</span></td>
+                        <td class="settings-item-value">
+                            <select class="styled working-schedule camera-config" id="workingScheduleTypeSelect">
+                                <option value="during">В работното време</option>
+                                <option value="outside">Извън работното време</option>
+                            </select>
+                        </td>
+                        <td><span class="help-mark" title="Задава кога да бъде активен режимът на засичане на движение">?</span></td>
+                    </tr>
+                    {% for config in camera_sections.get('working-schedule', {}).get('configs', []) %}
+                        {{config_item(config, "motionDetectionEnabled")}}
+                    {% endfor %}
+                </table>
+
+                <!-- Additional Camera Sections -->
+                {% for section in camera_sections.values() %}
+                {% if section.get('label') and section.get('configs') %}
+                <div class="settings-section-title {% if section['advanced'] %}advanced-setting{% endif %}">
+                    {% if section.get('onoff') %}<input type="checkbox" class="styled section additional-section {{section['name']}} camera-config" id="{{section['name']}}Switch">{% endif %}
+                    {% if section.get('description') %}<span class="help-mark" title="{{section['description']}}">?</span>{% endif %}
+                    <a class="settings-section-title">{{section['label']}}</a>
+                    <span class="minimize {% if section.get('open') %}open{% endif %}"></span>
+                </div>
+                <table class="settings">
+                    {% for config in section['configs'] %}
+                        {{config_item(config)}}
+                    {% endfor %}
+                </table>
+                {% endif %}
+                {% endfor %}
+
+                <div class="settings-progress"></div>
+            </div>
+        </div>
+        <img class="background-logo" src="{{static_path}}img/motioneye-logo.svg" onmousedown="return false;">
+        <div class="page-container"></div>
+        <div class="footer">
+            <div class="copyright-note">Frontend based on MotionEye &copy; Calin Crisan</div>
+        </div> 
+    </div>
+    {% else %}
+        <div class="camera-frame" id="camera{{camera_id}}"
+                streaming_framerate="{{camera_config['stream_maxrate']}}" streaming_server_resize="{{camera_config['@webcam_server_resize']|string|lower}}"
+                proto="{{camera_config['@proto']}}" url="{{camera_config['@url']}}">
+
+            <div class="camera-container">
+                <div class="camera-placeholder"><img class="no-camera" src="{{static_path}}img/no-camera.svg"></div><img
+                    class="camera"><div class="camera-progress"><img class="camera-progress"></div>
+            </div>
+        </div>
+    {% endif %}
+    <div class="modal-glass"></div>
+    <div class="modal-container"></div>
+    <div class="popup-message-container"></div>
+{% endblock %}

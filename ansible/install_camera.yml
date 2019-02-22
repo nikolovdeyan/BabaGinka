@@ -45,10 +45,16 @@
       default: "80"
       private: no
 
+    - name: TIMEZONE
+      prompt: "Timezone the camera will operate in"
+      default: "Europe/Sofia"
+
   tasks:
     - include_tasks: tasks/raspbian_common.yml
 
     - include_tasks: tasks/raspbian_cameramodule.yml
+
+    - include_tasks: tasks/raspbian_add_utils.yml
 
     - include_tasks: tasks/motion_install.yml
 
@@ -56,9 +62,7 @@
 
     - include_tasks: tasks/motioneye_style.yml
 
-#    - include_tasks: tasks/motioneye_translate.yml
-
-    - include_tasks: tasks/raspbian_add_utils.yml
+    - include_tasks: tasks/motioneye_translate.yml
 
     - name: Playbook complete! Restarting Raspberry Pi
       shell: sleep 2 && shutdown -r now "Ansible reboot triggered"

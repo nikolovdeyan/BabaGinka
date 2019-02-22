@@ -1,3 +1,7 @@
+# Ansible task to install commonly used packages
+# -----------------------------------------------------------------------------
+#
+
 - name: installing additional utilities
   apt:
     name: '{{ packages }}'

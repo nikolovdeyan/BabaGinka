@@ -1,7 +1,7 @@
 # Ansible task to style BabaGinka's front end.
 # -----------------------------------------------------------------------------
 #
-# 
+# This file contains a sequence of tasks to style the motionEye frontend.
 
 - name: <Replace static files> Add cyrillic fonts for motioneye
   copy:
@@ -11,17 +11,18 @@
   with_fileglob:
     - ../files/fnt/*
 
-- name: <Replace static files> Replace motionEye CSS 1
-  template:
-    src: ../templates/css/ui.css
-    dest: /usr/local/lib/python2.7/dist-packages/motioneye/static/css/ui.css
+- name: <Replace static files> Replace motionEye CSS
+  copy:
+    src: "{{ item }}"
+    dest: /usr/local/lib/python2.7/dist-packages/motioneye/static/css
+    owner: pi
+  with_fileglob:
+    - ../files/css/*
 
-- name: <Replace static files> Replace motionEye CSS 2
-  template:
-    src: ../templates/css/main.css
-    dest: /usr/local/lib/python2.7/dist-packages/motioneye/static/css/main.css
-
-- name: <Replace static files> Replace motionEye CSS 3
-  template:
-    src: ../templates/css/frame.css
-    dest: /usr/local/lib/python2.7/dist-packages/motioneye/static/css/frame.css
+- name: <Replace static files> Replace motionEye images
+  copy:
+    src: "{{ item }}"
+    dest: /usr/local/lib/python2.7/dist-packages/motioneye/static/img
+    owner: pi
+  with_fileglob:
+    - ../files/img/*

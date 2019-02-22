@@ -1,3 +1,8 @@
+# Ansible tasks to enable a Raspberry Pi camera module.
+# -----------------------------------------------------------------------------
+#
+# 
+
 - name: enable raspberry pi on-board camera module
   lineinfile: line='{{ item.key }}={{ item.value }}'
       dest=/boot/config.txt

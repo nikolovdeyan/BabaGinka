@@ -1,3 +1,8 @@
+# Ansible tasks to provision a Raspberry Pi
+# -----------------------------------------------------------------------------
+#
+# Common provision tasks for Raspbian.
+
 - name: expand filesystem
   command: raspi-config --expand-rootfs
   become: yes
@@ -23,6 +28,11 @@
     user: pi
     state: present
     key: "{{lookup('file', '~/.ssh/id_rsa.pub') }}"
+
+- name: set timezone
+  become: yes
+  timezone:
+    name: "{{ TIMEZONE }}"
 
 - name: update system
   become: yes
