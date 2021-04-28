@@ -27,7 +27,7 @@
   authorized_key:
     user: pi
     state: present
-    key: "{{lookup('file', '~/.ssh/id_rsa.pub') }}"
+    key: "{{lookup('file', '~/.ssh/pikey_rsa.pub') }}"
 
 - name: set timezone
   become: yes

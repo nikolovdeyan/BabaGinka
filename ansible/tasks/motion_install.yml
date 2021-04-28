@@ -9,14 +9,14 @@
   vars:
     packages:
       - ffmpeg
-      - v4l-utils
-      - libmariadbclient18
+      - libmariadb3
       - libpq5
+      - libmicrohttpd12
 
 - name: <Install motion> Download motion
   get_url:
-    url: https://github.com/Motion-Project/motion/releases/download/release-4.1.1/pi_stretch_motion_4.1.1-1_armhf.deb
-    dest: /home/pi/pi_stretch_motion_4.1.1-1_armhf.deb
+    url: https://github.com/Motion-Project/motion/releases/download/release-4.2.2/pi_buster_motion_4.2.2-1_armhf.deb
+    dest: /home/pi/pi_buster_motion_4.2.2-1_armhf.deb
     
 - name: <Install motion> Install motion
-  command: dpkg -i pi_stretch_motion_4.1.1-1_armhf.deb
+  command: dpkg -i pi_buster_motion_4.2.2-1_armhf.deb

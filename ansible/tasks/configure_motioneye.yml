@@ -1,40 +1,40 @@
-- name: <thread-1.conf> Stopping motion detection by default
+- name: <camera-1.conf> Stopping motion detection by default
   lineinfile:
     dest: /etc/motioneye/thread-1.conf
     regexp: '^# @motion_detection'
     line: '# @motion_detection off'
 
-- name: <thread-1.conf> Naming the camera
+- name: <camera-1.conf> Naming the camera
   lineinfile:
     dest: /etc/motioneye/thread-1.conf
     regexp: '^# @name'
     line: '# @name Ginka'
 
-- name: <thread-1.conf> Setting image width
+- name: <camera-1.conf> Setting image width
   lineinfile:
     dest: /etc/motioneye/thread-1.conf
     regexp: '^width'
     line: 'width 1280'
 
-- name: <thread-1.conf> Setting image height
+- name: <camera-1.conf> Setting image height
   lineinfile:
     dest: /etc/motioneye/thread-1.conf
     regexp: '^height'
     line: 'height 1080'
 
-- name: <thread-1.conf> Setting image threshold
+- name: <camera-1.conf> Setting image threshold
   lineinfile:
     dest: /etc/motioneye/thread-1.conf
     regexp: '^threshold'
     line: 'threshold 64225'
 
-- name: <thread-1.conf> Setting stream maximum framerate
+- name: <camera-1.conf> Setting stream maximum framerate
   lineinfile:
     dest: /etc/motioneye/thread-1.conf
     regexp: '^stream_maxrate'
     line: 'stream_maxrate 10'
 
-- name: <thread-1.conf> Setting framerate
+- name: <camera-1.conf> Setting framerate
   lineinfile:
     dest: /etc/motioneye/thread-1.conf
     regexp: '^framerate'

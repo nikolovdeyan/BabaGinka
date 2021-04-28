@@ -25,20 +25,25 @@
 - name: <Install motionEye> Prepare motionEye media directory
   file: path=/var/lib/motioneye state=directory
 
-- name: <Install motionEye> Prepare motion default configuration
+- name: <Install motionEye> Add motion default configuration
   template:
     src: ../templates/motion.conf
     dest: /etc/motioneye/motion.conf
 
-- name: <Install motionEye> Prepare motionEye default configuration
+- name: <Install motionEye> Add motionEye default configuration
   template:
     src: ../templates/motioneye.conf
     dest: /etc/motioneye/motioneye.conf
 
-- name: <Install motionEye> Prepare motion thread configuration
+- name: <Install motionEye> Add motion camera configuration
   template:
-    src: ../templates/thread-1.conf
-    dest: /etc/motioneye/thread-1.conf
+    src: ../templates/camera-1.conf
+    dest: /etc/motioneye/camera-1.conf
+
+- name: <Install motionEye> Add user UI preference configuration
+  template:
+    src: ../templates/prefs.json
+    dest: /etc/motioneye/prefs.json
 
 - name: <Install motionEye> Add motionEye service
   command: cp /usr/local/share/motioneye/extra/motioneye.systemd-unit-local /etc/systemd/system/motioneye.service

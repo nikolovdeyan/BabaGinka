@@ -22,8 +22,13 @@
       prompt: "Wireless network password"
       private: yes
 
+    - name: COUNTRY_CODE
+      prompt: "2 letter ISO 3166-1 country code where the device will be used"
+      default: "BG"
+      private: no
+  
     - name: ADMIN_USERNAME
-      prompt: "Please enter an user name for the admin account"
+      prompt: "Please enter a user name for the admin account"
       default: "admin"
       private: no
 
@@ -60,9 +65,9 @@
 
     - include_tasks: tasks/motioneye_install.yml
 
-    - include_tasks: tasks/motioneye_style.yml
+#    - include_tasks: tasks/motioneye_style.yml
 
-    - include_tasks: tasks/motioneye_translate.yml
+#    - include_tasks: tasks/motioneye_translate.yml
 
     - name: Playbook complete! Restarting Raspberry Pi
       shell: sleep 2 && shutdown -r now "Ansible reboot triggered"
